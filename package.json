@@ -1,10 +1,10 @@
 {
   "name": "seek-require",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "find requires from peice of code/ast",
   "main": "index.js",
   "scripts": {
-    "test": "./node_modules/.bin/mocha test"
+    "test": "node test/test.js"
   },
   "repository": {
     "type": "git",

@@ -6,4 +6,29 @@ var assert = require('assert');
 var rs = seeker(fs.readFileSync(path.join(__dirname, 'fixtures/simplest.js'), 'utf8'));
 assert.equal(Object.keys(rs).length, 1);
 
-console.log(seeker(fs.readFileSync(path.join(__dirname, 'fixtures/couch-db/lib/base.js'), 'utf8')));
+rs = seeker(fs.readFileSync(path.join(__dirname, 'fixtures/couch-db/base.js'), 'utf8'));
+
+assert.equal(Object.keys(rs).length, 4);
+assert.equal(rs.unresolved.length, 0);
+
+
+rs = seeker(fs.readFileSync(path.join(__dirname, 'fixtures/dep.js'), 'utf8'));
+
+assert.equal(Object.keys(rs).length, 0);
+assert.equal(rs.unresolved.length, 1);
+
+
+rs = seeker(fs.readFileSync(path.join(__dirname, 'fixtures/dep.js'), 'utf8'), {
+  strictArguments: false
+});
+
+assert.equal(Object.keys(rs).length, 1);
+assert.equal(rs.unresolved.length, 1);
+
+rs = seeker(fs.readFileSync(path.join(__dirname, 'fixtures/dep.js'), 'utf8'), {
+  strictArguments: false,
+  literalOnly: true
+});
+
+assert.equal(Object.keys(rs).length, 1);
+assert.equal(rs.unresolved.length, 0);

@@ -20,45 +20,90 @@ function findRef(scope, ident) {
   return found;
 }
 
+/**
+ * @name SROption
+ * @class
+ * @property {boolean} literalOnly, only found require calls with literal arguments, default to false
+ * @property {boolean} strictArguments, only accept one argument for require calls, default to true
+ */
 
-module.exports = function(ast, scopes) {
-  if(typeof ast == 'string') 
-    ast = esprima.parse(ast, {loc: true});
 
+/**
+ * @param {String|AST} ast
+ * @param {Array.<Scope>=} scopes
+ * @param {SROption=} options
+ */
+module.exports = function(ast, scopes, options) {
+  if (typeof ast == 'string')
+    ast = esprima.parse(ast, {
+      loc: true,
+      range: true
+    });
+
+  if (Object.prototype.toString.call(scopes) == '[object Object]') {
+    options = scopes;
+    scopes = undefined;
+  }
+
+  // read options
+  options = options || {};
+  var literalOnly = ('literalOnly' in options) ? options.literalOnly : false;
+  var strictArguments = ('strictArguments' in options) ? options.strictArguments : true;
+
+  // get global scope
   scopes = scopes || escope.analyze(ast).scopes;
-
   var gs = scopes.filter(function(scope) {
-      return scope.type == 'global';
-  })[0],
-    rs = {};
+    return scope.type == 'global';
+  })[0];
 
-  if(!gs) gs = scopes[0]; // if no global scope, choose top scope
+  var rs = {};
+
+  Object.defineProperty(rs, 'unresolved', {
+    enumerable: false, // use default false value to avoid show in enumeration
+    configurable: false, // use default false value to avoid reconfig
+    writable: false, // use default false value to avoid override
+    value: []
+  });
+
+  if (!gs) gs = scopes[0]; // if no global scope, choose top scope
 
   ast = estraverse.traverse(ast, {
     enter: function(current, parent) {
       // strict require for now
       if (current.type === 'CallExpression' && current.callee.type === 'Identifier' &&
-          current.callee.name === 'require' && current.arguments.length > 0) {
-        
-        if(current.arguments.length > 1) { 
-          // TODO:
+        current.callee.name === 'require' && current.arguments.length > 0) {
+
+        if (strictArguments && current.arguments.length !== 1) {
           return;
         }
-        
-        if(current.arguments[0].type !== 'Literal') {
-          // TODO:
+
+        if (literalOnly && current.arguments[0].type !== 'Literal') {
           return;
         }
-        
+
 
         var ref = findRef(gs, current.callee);
+
         if (!ref.resolved) { // global require function
+
+          // non arguments
+          if (current.arguments.length == 0) {
+            rs.unresolved.push(current);
+            return;
+          }
+
+          var arg1 = current.arguments[0];
+
+          // non-literal arguments, dynamic require
+          if (arg1.type !== 'Literal') {
+            rs.unresolved.push(current);
+            return;
+          }
+
+          // normal requires
           var name = current.arguments[0].value;
           var list = rs[name] = rs[name] || [];
-          list.push({
-            name: name,
-            node: current
-          });
+          list.push(current);
         }
       }
     }
@@ -66,4 +111,3 @@ module.exports = function(ast, scopes) {
 
   return rs;
 };
-
