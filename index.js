@@ -87,7 +87,7 @@ module.exports = function(ast, scopes, options) {
         if (!ref.resolved) { // global require function
 
           // non arguments
-          if (current.arguments.length == 0) {
+          if (current.arguments.length === 0) {
             rs.unresolved.push(current);
             return;
           }
